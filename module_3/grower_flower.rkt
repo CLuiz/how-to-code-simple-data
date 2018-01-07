@@ -9,8 +9,8 @@
 ;Do not use language features we have not seen in the videos. 
 
 ;If you need inspiration, you can choose to create a program that allows you
-;to click on a spot on the screen to create a flower, which then grows over time.
-;If you click again the first flower is replaced by a new one at the new position.
+;to click on a spot on the screen to create a star, which then grows over time.
+;If you click again the first star is replaced by a new one at the new position.
 
 ;You should do all your design work in DrRacket. Following the step-by-step recipe
 ;in DrRacket will help you be sure that you have a quality solution.
@@ -24,34 +24,33 @@
 (define WIDTH 400)
 (define HEIGHT 200)
 
-(define FLOWER-WIDTH-MAX 20)
-(define FLOWER-HEIGHT-MAX 20)
-(define FLOWER (star 40 "solid" "firebrick"))
+(define STAR-SIZE-MAX 200)
+(define COLOR "firebrick")
+(define IMG-TYPE "solid")
+(define FIRST-STAR (star 40 "solid" "COLOR"))
 (define GROWTH 10)
 (define MTS (empty-scene WIDTH HEIGHT))
 
 ;; =====================
 ;; Data definitions
-(define-struct flower (x y h w g))
-;; Flower is (make-flower Natural[0, HEIGHT] Natural[0, WIDTH] Natural[0, 20] Natural[0, 20] Integer)
-;; interp. (make-flower x y h w) is a flower with coordinates x, y and size h, w and growth rate g
-;;         x, y is the center of the flower
+(define-struct gstar (x y s g))
+;; Gstar is (make-gstar Natural[0, HEIGHT] Natural[0, WIDTH] Natural[0, 20] Natural[0, 20] Integer)
+;; interp. (make-gstar x y h w) is a gstar with coordinates x, y and size h, w and growth rate g
+;;         x, y is the center of the gstar
 ;;         x is in the screen coordinates (pixels)
 ;;         y is in the screen coordinates (pixels)
-;;         h is in the screen coordinates (pixels)
-;;         w is in the screen coordinates (pixels)
+;;         s is in the screen coordinates (pixels)
 ;;         g is rate of growth
-(define F1 (make-flower 10 10 10 10 GROWTH)) ; flower centered at 10,10 with height 10 and width 10,
+(define GS1 (make-gstar 10 10 10 GROWTH)) ; gstar centered at 10,10 with size 10,
 ;;                                        growing at a rate of GROWTH
-(define F2 (make-flower 20 20 15 5 GROWTH)) ; flower centered at 20, 20 with height 15 and width 5,
+(define GS2 (make-gstar 20 20 80 GROWTH)) ; gstar centered at 20, 20 with size 80,
 ;;                                        growing at a rate of GROWTH
 #;
-(define (fn-for-flower f)
-  (... (flower-x f)       ;Natural[0, HEIGHT]
-       (flower-y f)       ;Natural[0, WIDTH]
-       (flower-h f)       ;Natural[0, 20]
-       (flower-w f)       ;Natural[0, 20]
-       (flower-g f)))     ;Integer
+(define (fn-for-gstar gs)
+  (... (gstar-x gs)       ;Natural[0, HEIGHT]
+       (gstar-y gs)       ;Natural[0, WIDTH]
+       (gstar-s gs)       ;Natural[0, STAR-SIZE-MAX]
+       (gstar-g gs)))     ;Integer
 
 ;;Template rules used:
 ;;  - compound: 5 fields
@@ -59,64 +58,51 @@
 ;; =====================
 ;; Functions:
 
-;; Flower -> Flower
-;; called to grow the first flower; start with (main (make-flower))
+;; Gstar -> Gstar
+;; called to grow the first gstar; gstart with (main (make-gstar))
 ;; no tests for main function
-(define (main f)
-  (big-bang f
-    (on-tick next-flower)      ; Flower -> Flower
-    (to-draw render-flower)    ; Flower -> Image
-    (on-mouse handle-mouse)))  ; Flower MouseEvent -> Flower
+(define (main gs)
+  (big-bang gs
+    (on-tick next-gstar)      ; gstar -> gstar
+    (to-draw render-gstar)    ; gstar -> Image
+    (on-mouse handle-mouse))) ; gstar MouseEvent -> gstar
 
-;; Flower -> Flower
-;; increase flower size by g;
-(check-expect (next-flower (make-flower 10 10 20 20 GROWTH))
-              (make-flower 10 10 10 10 GROWTH)) ;shrink
+;; Gstar -> Gstar
+;; increase gstar size by growth rate g;
+(check-expect (next-gstar (make-gstar 10 10 STAR-SIZE-MAX GROWTH))
+              (make-gstar 10 10 10 GROWTH)) ;shrink
+(check-expect (next-gstar GS1)
+              (make-gstar 10 10 (+ 10 GROWTH) GROWTH)) ;grow
+;(define (next-gstar gs) gs)       ;stub
 
-(check-expect (next-flower F1)
-              (make-flower 10 10 (+ 10 GROWTH) (+ 10 GROWTH) GROWTH)) ;grow
+; took template from gstar
+(define (next-gstar gs)
+  (if (< (+ (gstar-s gs) (gstar-g gs)) STAR-SIZE-MAX)
+      (make-gstar (gstar-x gs) (gstar-y gs) (+ (gstar-s gs) (gstar-g gs)) (gstar-g gs))
+      (make-gstar (gstar-x gs) (gstar-y gs) 10 (gstar-g gs))))
+  
+;; Gstar -> Image
+;; place appropriate sized gstar image on MTS at (gstar-x gs) and (gstar-y gs)
+(check-expect (render-gstar GS1)
+              (place-image (star 10 IMG-TYPE COLOR) 10 10 MTS))
+(check-expect (render-gstar GS2)
+              (place-image (star 80 IMG-TYPE COLOR) 20 20 MTS))
+;(define (render-gstar gs) MTS)   ;stub
 
-;(define (next-flower f) f)       ;stub
+; took template from gstar
+(define (render-gstar gs)
+  (place-image (star (gstar-s gs) IMG-TYPE COLOR) (gstar-x gs) (gstar-y gs) MTS))    
 
-; took template from Flower
+; gstar MouseEvent -> gstar
+; Grow new gstar at x, y coordinates of mouse click
+(check-expect (handle-mouse 10 40 40 "button-down") (make-gstar 40 40 20 10))
+(check-expect (handle-mouse 10 40 40 "button-up") 10)
+(check-expect (handle-mouse 10 10 40 "button-down") (make-gstar 10 40 20 10))
+(check-expect (handle-mouse 10 10 40 "button-up") 10)
 
-(define (next-flower f)
-  (cond [(and (<= (+ (flower-h f) (flower-g f)) FLOWER-HEIGHT-MAX)
-              (<= (+ (flower-w f) (flower-g f)) FLOWER-WIDTH-MAX))
-         (make-flower (flower-x f)
-                      (flower-y f)
-                      (+ (flower-h f) (flower-g f))
-                      (+ (flower-w f) (flower-g f))
-                      (flower-g f))]
-        [(or (> (+ (flower-h f) (flower-g f)) FLOWER-HEIGHT-MAX)
-             (> (+ (flower-w f) (flower-g f)) FLOWER-WIDTH-MAX))
-         (make-flower 10 10 10 10 GROWTH)]))
+;(define (handle-mouse gs x y me) gs)  ;stub
 
-;; Cow -> Image
-;; place appropriate sized flower image on MTS at (flower-x f) and (flower-y f)
-(check-expect (render-flower (make-flower 20 20 10 10 GROWTH))
-              (place-image FLOWER 20 20 MTS))
-
-;(define (render-flower f) MTS)   ;stub
-
-; took template from flower
-(define (render-flower f)
-  (place-image FLOWER
-               (flower-x f)
-               (flower-y f)
-               MTS))    
-
-;;Flower -> Flower
-
-;(define (grow-flower FLOWER)
-;  (if (> (flower-x f) 0)
-;      RCOW
-;      LCOW)))
-
-; Flower MouseEvent -> Flower
-; Grow new flower at x, y coordinates of mouse click
-
-;(define (handle-mouse f me) f)  ;stub
-
-(define (handle-mouse f x y me)
-  (cond [(mouse=? me "button-down") (make-flower x y 20 20 GROWTH)]))
+; took template from gstar
+(define (handle-mouse gs x y me)
+  (cond [(mouse=? me "button-down") (make-gstar x y 20 GROWTH)]
+        [else gs]))
