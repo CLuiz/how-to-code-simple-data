@@ -113,7 +113,7 @@
 ;; Missile is (make-missile Number Number)
 ;; interp. the missile's location is x y in screen coordinates
 
-(define M1 (make-missile 150 300))                       ;not hit U1
+(define M1 (make-missile 150 300))                               ;not hit U1
 (define M2 (make-missile (invader-x I1) (+ (invader-y I1) 10)))  ;exactly hit U1
 (define M3 (make-missile (invader-x I1) (+ (invader-y I1)  5)))  ;> hit U1
 
@@ -394,31 +394,87 @@
 (check-expect (render-game G1) (place-image TANK (tank-x (game-tank G0)) TANK-Y BACKGROUND))
 (check-expect (render-game G2) (place-image INVADER (invader-x (first (game-invaders G2))) (invader-y (first (game-invaders G2)))
                                             (place-image MISSILE (missile-x (first (game-missiles G2)))
-                                             (missile-y (first (game-missiles G2)))
-                                             (place-image TANK (tank-x (game-tank G2)) TANK-Y BACKGROUND))))
+                                                         (missile-y (first (game-missiles G2)))
+                                                         (place-image TANK (tank-x (game-tank G2)) TANK-Y BACKGROUND))))
 (check-expect (render-game G3) (place-image INVADER (invader-x (first (game-invaders G3))) (invader-y (first (game-invaders G3)))
                                             (place-image INVADER (invader-x (first (rest (game-invaders G3)))) (invader-y (first (rest (game-invaders G3))))
-                                            (place-image MISSILE (missile-x (first (game-missiles G3)))
-                                             (missile-y (first (game-missiles G3)))
-                                             (place-image MISSILE (missile-x (first (rest (game-missiles G3))))
-                                             (missile-y (first (rest (game-missiles G3))))
-                                             (place-image TANK (tank-x (game-tank G3)) TANK-Y BACKGROUND))))))
-;(define (render-game g ) g)
+                                                         (place-image MISSILE (missile-x (first (game-missiles G3)))
+                                                                      (missile-y (first (game-missiles G3)))
+                                                                      (place-image MISSILE (missile-x (first (rest (game-missiles G3))))
+                                                                                   (missile-y (first (rest (game-missiles G3))))
+                                                                                   (place-image TANK (tank-x (game-tank G3)) TANK-Y BACKGROUND))))))
+(define (render-game g ) g)
 
 ;<took template for game>
-
-(define (render-game s)
-  (render-invaders (game-invaders s))
-  (render-missiles (game-missiles s))
-  (render-tank (game-tank s)))
+#;
+(define (render-game g)
+  (overlay 
+   (render-invaders (game-invaders g))
+   (render-missiles (game-missiles g))
+   (render-tank (game-tank g))))
 
 ;(define G0 (make-game empty empty T0))
 ;(define G1 (make-game empty empty T1))
 ;(define G2 (make-game (list I1) (list M1) T1))
 ;(define G3 (make-game (list I1 I2) (list M1 M2) T1))
 
-(define (render-invaders loi) loi) ;stub
+;ListOfInvaders -> Image
+; produces overlayed image of all invaders
+(check-expect (render-invaders empty) BACKGROUND)
+(check-expect (render-invaders LOI1) BACKGROUND)
+(check-expect (render-invaders LOI3)
+              (place-image INVADER 150 100
+                            (place-image INVADER 150 500
+                                         (place-image INVADER 150 510 BACKGROUND))))
+;(define (render-invaders loi) loi) ;stub
 
-(define (render-missiles lom) lom) ;stub
+;took template for ListOfInvaders
+
+(define (render-invaders loi)
+  (cond [(empty? loi) BACKGROUND]
+        [else
+         (render-invader (first loi)
+         (render-invaders (rest loi)))]))
+
+; Invader -> image
+; produces image of invader at invader-x invader-y
+(check-expect (render-invader I1 BACKGROUND)
+              (place-image INVADER (invader-x I1) (invader-y I1) BACKGROUND))
+(check-expect (render-invader I2 BACKGROUND)
+              (place-image INVADER (invader-x I2) (invader-y I2) BACKGROUND))
+(check-expect (render-invader I3 BACKGROUND)
+              (place-image INVADER (invader-x I3) (invader-y I3) BACKGROUND))
+;(define (render-invader i) i) ; stub
+
+;<took template from invader w/extra param>
+(define (render-invader i img)
+  (place-image INVADER (invader-x i) (invader-y i) img))
+
+; ListOfMissile -> Image
+; produce image of each missil in list
+(check-expect (render-missiles empty) BACKGROUND)                                                              
+(check-expect (render-missiles LOM2) (place-image MISSILE 150 300
+                                                  (place-image MISSILE 150 300 BACKGROUND)))  ;exactly hit U1
+(check-expect (render-missiles LOM3) (place-image MISSILE 150 110
+                                                  (place-image MISSILE 150 110
+                                                               (place-image MISSILE 150 105 BACKGROUND))))
+;(define (render-missiles lom) lom) ;stub
+
+(define (render-missiles lom)
+  (cond [(empty? lom) BACKGROUND]
+        [else
+         (render-missile (first lom)
+         (render-missiles (rest lom)))]))
+
+; Missile -> Image
+; produce image of missile
+(check-expect (render-missile M1 BACKGROUND) (place-image MISSILE (missile-x M1) (missile-y M1) BACKGROUND))
+(check-expect (render-missile M2 BACKGROUND) (place-image MISSILE (missile-x M2) (missile-y M2) BACKGROUND))
+(check-expect (render-missile M3 BACKGROUND) (place-image MISSILE (missile-x M3) (missile-y M3) BACKGROUND))
+
+;<took template from missile w/extra parameter
+(define (render-missile m img)
+  (place-image MISSILE (missile-x m) (missile-y m) img))
+
 
 (define (render-tank t) t) ; stub
